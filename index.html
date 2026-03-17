@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Airbnb Melbourne — Data Analysis Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0c0f14;
+    --surface: #13181f;
+    --surface2: #1a2130;
+    --border: #232c3d;
+    --accent: #ff5a5f;
+    --accent2: #00a699;
+    --accent3: #fc642d;
+    --gold: #f0c040;
+    --text: #e8edf5;
+    --muted: #7a8ba8;
+    --tag-bg: #1e2a3a;
+    --card-hover: #1e2840;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% 10%, rgba(255,90,95,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 80%, rgba(0,166,153,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1380px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 56px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .header-inner { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 24px; }
+
+  .header-left .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-left .eyebrow::before {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 4vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .header-meta {
+    font-size: 15px;
+    color: var(--muted);
+    margin-top: 12px;
+    display: flex; gap: 20px; flex-wrap: wrap;
+  }
+
+  .header-meta span { display: flex; align-items: center; gap: 6px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  .badge-red { background: rgba(255,90,95,0.15); color: var(--accent); border: 1px solid rgba(255,90,95,0.25); }
+  .badge-green { background: rgba(0,166,153,0.12); color: var(--accent2); border: 1px solid rgba(0,166,153,0.2); }
+  .badge-orange { background: rgba(252,100,45,0.12); color: var(--accent3); border: 1px solid rgba(252,100,45,0.2); }
+
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+
+  /* ── STAT CARDS ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 48px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,90,95,0.15); }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: var(--card-accent, var(--accent));
+    border-radius: 16px 16px 0 0;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-sub { font-size: 15px; color: var(--muted); }
+
+  .stat-icon {
+    position: absolute;
+    top: 20px; right: 20px;
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: var(--tag-bg);
+  }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+  }
+
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .grid-13 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .full-width { margin-bottom: 32px; }
+
+  /* ── CHART CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px 28px 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .card-title {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .card-desc { font-size: 15px; color: var(--muted); margin-bottom: 22px; }
+
+  .chart-wrap { position: relative; }
+
+  canvas { width: 100% !important; }
+
+  /* ── NEIGHBOURHOOD TABLE ── */
+  .neigh-table { width: 100%; border-collapse: collapse; }
+
+  .neigh-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .neigh-table td {
+    padding: 11px 14px;
+    font-size: 15px;
+    border-bottom: 1px solid rgba(35,44,61,0.5);
+    transition: background 0.15s;
+  }
+
+  .neigh-table tr:hover td { background: var(--surface2); }
+
+  .neigh-table .rank {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    width: 32px;
+  }
+
+  .neigh-table .name { font-weight: 500; color: var(--text); }
+
+  .neigh-table .price-col {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 15px;
+  }
+
+  .price-bar-wrap { display: flex; align-items: center; gap: 10px; }
+
+  .price-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    flex-shrink: 0;
+  }
+
+  .avail-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .avail-high { background: rgba(0,166,153,0.12); color: #0369a1; }
+  .avail-med { background: rgba(217,119,6,0.1); color: #92400e; }
+  .avail-low { background: rgba(220,38,38,0.08); color: #b91c1c; }
+
+  /* ── LISTINGS TABLE ── */
+  .listings-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px; gap: 14px; flex-wrap: wrap;
+  }
+
+  .filter-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .filter-select {
+    background: #1a2130;
+    border: 1px solid var(--border);
+    color: #e8edf5;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 160px;
+    transition: border-color 0.2s;
+  }
+
+  .filter-select option { background: #1a2130; color: #e8edf5; }
+
+  .filter-select:focus { border-color: var(--accent); }
+
+  .search-input {
+    background: #1a2130;
+    border: 1px solid var(--border);
+    color: #e8edf5;
+    padding: 8px 14px 8px 36px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+    position: relative;
+  }
+
+  .search-wrap { position: relative; }
+
+  .search-wrap::before {
+    content: '⌕';
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 17px;
+    pointer-events: none;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+
+  .listings-table { width: 100%; border-collapse: collapse; }
+
+  .listings-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .listings-table th:hover { color: var(--text); }
+
+  .listings-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(208,220,232,0.7);
+    vertical-align: middle;
+  }
+
+  .listings-table tr:hover td { background: var(--surface2); }
+
+  .room-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .room-entire { background: rgba(0,166,153,0.12); color: #0369a1; }
+  .room-private { background: rgba(252,100,45,0.12); color: #6d28d9; }
+  .room-shared { background: rgba(217,119,6,0.1); color: #92400e; }
+
+  .price-num {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  .pagination {
+    display: flex; gap: 6px; align-items: center;
+    justify-content: flex-end;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  .page-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.15s;
+  }
+
+  .page-btn:hover, .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .page-info { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-right: 6px; }
+
+  /* ── ROOM TYPE DONUT LEGEND ── */
+  .donut-legend {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 18px;
+  }
+
+  .legend-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px;
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  .legend-label { flex: 1; color: var(--text); }
+
+  .legend-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 64px;
+    padding: 32px 0;
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  footer strong { color: var(--text); }
+
+  /* ── SCROLL FADE IN ── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1024px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-13 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 0 16px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+    .header-right { display: none; }
+  }
+
+  .dot-separator { color: var(--border); }
+  .text-accent { color: var(--accent); }
+  .text-green { color: var(--accent2); }
+  .text-orange { color: var(--accent3); }
+  .text-gold { color: var(--gold); }
+  .font-mono { font-family: 'DM Mono', monospace; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="eyebrow">DSP Project · Melbourne, Australia</div>
+        <h1>Airbnb<br /><span>Data Analysis</span></h1>
+        <div class="header-meta">
+          <span>👤 Krish Satdeve · B1-B2-29</span>
+          <span class="dot-separator">•</span>
+          <span>👤 Aditi Paul · B1-B2-33</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="badge badge-red">📍 Melbourne, VIC</span>
+        <span class="badge badge-green">100 Listings</span>
+        <span class="badge badge-orange">22 Neighbourhoods</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── STAT CARDS ── -->
+  <div class="stats-row fade-in">
+    <div class="stat-card" style="--card-accent: var(--accent)">
+      <div class="stat-icon">🏠</div>
+      <div class="stat-label">Total Listings</div>
+      <div class="stat-value">100</div>
+      <div class="stat-sub">Melbourne metro area</div>
+    </div>
+    <div class="stat-card" style="--card-accent: var(--accent2)">
+      <div class="stat-icon">💰</div>
+      <div class="stat-label">Avg Nightly Price</div>
+      <div class="stat-value">$155</div>
+      <div class="stat-sub">AUD · Range $35–$1,000</div>
+    </div>
+    <div class="stat-card" style="--card-accent: var(--accent3)">
+      <div class="stat-icon">📅</div>
+      <div class="stat-label">Avg Availability</div>
+      <div class="stat-value">238</div>
+      <div class="stat-sub">days per year</div>
+    </div>
+    <div class="stat-card" style="--card-accent: var(--gold)">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-label">Total Reviews</div>
+      <div class="stat-value">5,241</div>
+      <div class="stat-sub">across all listings</div>
+    </div>
+  </div>
+
+  <!-- ── ROW: PRICE BAR + DONUT ── -->
+  <div class="grid-13 fade-in">
+
+    <!-- Most Expensive Neighbourhoods -->
+    <div class="card">
+      <div class="card-title">🏆 Most Expensive Neighbourhoods</div>
+      <div class="card-desc">Average nightly price (AUD) ranked by neighbourhood</div>
+      <div class="chart-wrap">
+        <canvas id="priceBarChart" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- Room Type Donut -->
+    <div class="card">
+      <div class="card-title">🛏️ Room Type Breakdown</div>
+      <div class="card-desc">Distribution of listing types across the dataset</div>
+      <div class="chart-wrap" style="max-width:240px; margin:0 auto;">
+        <canvas id="roomDonut" height="220"></canvas>
+      </div>
+      <div class="donut-legend">
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#00a699"></span>
+          <span class="legend-label">Entire Home / Apt</span>
+          <span class="legend-pct" style="color:var(--accent2)">57%</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#fc642d"></span>
+          <span class="legend-label">Private Room</span>
+          <span class="legend-pct" style="color:var(--accent3)">42%</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#f0c040"></span>
+          <span class="legend-label">Shared Room</span>
+          <span class="legend-pct" style="color:var(--gold)">1%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ROW: PRICE DISTRIBUTION + AVAILABILITY ── -->
+  <div class="grid-2 fade-in">
+    <div class="card">
+      <div class="card-title">📊 Price Distribution</div>
+      <div class="card-desc">Frequency of listings across price buckets (AUD/night)</div>
+      <div class="chart-wrap">
+        <canvas id="priceHistogram" height="230"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 Availability Trends</div>
+      <div class="card-desc">Average days available per year by neighbourhood</div>
+      <div class="chart-wrap">
+        <canvas id="availChart" height="230"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NEIGHBOURHOOD SUMMARY TABLE ── -->
+  <div class="card full-width fade-in">
+    <div class="card-title">🗺️ Neighbourhood Summary</div>
+    <div class="card-desc">Average price and availability ranked by price (all 22 neighbourhoods)</div>
+    <div class="table-scroll">
+      <table class="neigh-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Neighbourhood</th>
+            <th>Avg Price (AUD)</th>
+            <th>Price Scale</th>
+            <th>Avg Availability (days/yr)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="neighTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── LISTINGS TABLE ── -->
+  <div class="card full-width fade-in">
+    <div class="listings-header">
+      <div>
+        <div class="card-title">📋 All Listings</div>
+        <div class="card-desc" style="margin:0">Browse, filter, and search all 100 Melbourne listings</div>
+      </div>
+      <div class="filter-row">
+        <div class="search-wrap">
+          <input class="search-input" id="searchInput" type="text" placeholder="Search listings..." />
+        </div>
+        <select class="filter-select" id="neighbourhoodFilter">
+          <option value="">All Neighbourhoods</option>
+        </select>
+        <select class="filter-select" id="roomFilter">
+          <option value="">All Room Types</option>
+          <option value="Entire home/apt">Entire Home / Apt</option>
+          <option value="Private room">Private Room</option>
+          <option value="Shared room">Shared Room</option>
+        </select>
+        <select class="filter-select" id="priceFilter">
+          <option value="">Any Price</option>
+          <option value="0-75">Under $75</option>
+          <option value="75-150">$75 – $150</option>
+          <option value="150-300">$150 – $300</option>
+          <option value="300+">$300+</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table class="listings-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable('name')">Name ↕</th>
+            <th onclick="sortTable('neighbourhood')">Neighbourhood ↕</th>
+            <th>Room Type</th>
+            <th onclick="sortTable('price')">Price ↕</th>
+            <th onclick="sortTable('minimum_nights')">Min Nights ↕</th>
+            <th onclick="sortTable('number_of_reviews')">Reviews ↕</th>
+            <th onclick="sortTable('availability_365')">Availability ↕</th>
+          </tr>
+        </thead>
+        <tbody id="listingsBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination">
+      <span class="page-info" id="pageInfo"></span>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="container">
+    <strong>Airbnb Melbourne Data Analysis</strong> · DSP Project ·
+    Krish Satdeve (B1-B2-29) &amp; Aditi Paul (B1-B2-33) ·
+    Dataset: 100 listings · Melbourne, Victoria, Australia
+  </div>
+</footer>
+
+<script>
+// ──────────────────────────────────────────────
+// DATA (embedded from airbnb_listings.csv)
+// ──────────────────────────────────────────────
+const RAW = [
+  {id:9835,name:"Beautiful Room & House",host_name:"Manju",neighbourhood:"Manningham",latitude:-37.7725,longitude:145.0923,room_type:"Private room",price:60,minimum_nights:1,number_of_reviews:4,availability_365:365},
+  {id:12936,name:"St Kilda 1BR+BEACHSIDE+BALCONY+WIFI+AC",host_name:"The A2C Team",neighbourhood:"Port Phillip",latitude:-37.86,longitude:144.9766,room_type:"Entire home/apt",price:95,minimum_nights:3,number_of_reviews:42,availability_365:0},
+  {id:33111,name:"Million Dollar Views Over Melbourne",host_name:"Paul",neighbourhood:"Melbourne",latitude:-37.8216,longitude:144.9667,room_type:"Private room",price:1000,minimum_nights:1,number_of_reviews:2,availability_365:365},
+  {id:38271,name:"Melbourne - Old Trafford Apartment",host_name:"Daryl & Dee",neighbourhood:"Casey",latitude:-38.0573,longitude:145.3394,room_type:"Entire home/apt",price:99,minimum_nights:1,number_of_reviews:163,availability_365:341},
+  {id:41836,name:"CLOSE TO CITY & MELBOURNE AIRPORT",host_name:"Diana",neighbourhood:"Darebin",latitude:-37.6973,longitude:145.0008,room_type:"Private room",price:40,minimum_nights:7,number_of_reviews:159,availability_365:0},
+  {id:43429,name:"Tranquil Javanese-Style Apartment in Oakleigh East",host_name:"Allan",neighbourhood:"Monash",latitude:-37.8996,longitude:145.1145,room_type:"Entire home/apt",price:99,minimum_nights:2,number_of_reviews:215,availability_365:327},
+  {id:51592,name:"Central City Warehouse Apartment",host_name:"Michelle",neighbourhood:"Melbourne",latitude:-37.8127,longitude:144.9631,room_type:"Entire home/apt",price:242,minimum_nights:2,number_of_reviews:298,availability_365:297},
+  {id:66754,name:"Richmond CITY EDGE 60s COOL 1BR+WIFI+AC",host_name:"The A2C Team",neighbourhood:"Yarra",latitude:-37.8213,longitude:144.9941,room_type:"Entire home/apt",price:94,minimum_nights:3,number_of_reviews:70,availability_365:0},
+  {id:67211,name:"Kew Tranquility, Melbourne",host_name:"Kate",neighbourhood:"Boroondara",latitude:-37.8035,longitude:145.0358,room_type:"Private room",price:45,minimum_nights:2,number_of_reviews:176,availability_365:356},
+  {id:68411,name:"Large Bayside suburban house",host_name:"Alec",neighbourhood:"Bayside",latitude:-37.9338,longitude:145.016,room_type:"Entire home/apt",price:300,minimum_nights:1,number_of_reviews:0,availability_365:0},
+  {id:69421,name:"Pet Friendly Warm Apmt, Clifton Hill",host_name:"Wendy",neighbourhood:"Yarra",latitude:-37.7897,longitude:145.0047,room_type:"Entire home/apt",price:180,minimum_nights:2,number_of_reviews:1,availability_365:331},
+  {id:72576,name:"Stunning Fitzroy + private bathroom 'Little George'",host_name:"Ramona",neighbourhood:"Yarra",latitude:-37.8074,longitude:144.9805,room_type:"Private room",price:100,minimum_nights:2,number_of_reviews:544,availability_365:36},
+  {id:74324,name:"Tamerlane: Architect-designed luxury living",host_name:"Matt",neighbourhood:"Yarra",latitude:-37.8041,longitude:144.978,room_type:"Entire home/apt",price:292,minimum_nights:14,number_of_reviews:68,availability_365:289},
+  {id:74959,name:"Blissful Beachside Port Melbourne Warehouse",host_name:"Linda",neighbourhood:"Port Phillip",latitude:-37.841,longitude:144.9364,room_type:"Private room",price:90,minimum_nights:2,number_of_reviews:108,availability_365:277},
+  {id:78143,name:"2 bedrooms-ideal for friends/family in quiet area",host_name:"Julie",neighbourhood:"Stonnington",latitude:-37.8516,longitude:144.9894,room_type:"Private room",price:80,minimum_nights:2,number_of_reviews:149,availability_365:360},
+  {id:80986,name:"Richmond CENTRAL PARK EDGE 1BR+WIFI",host_name:"The A2C Team",neighbourhood:"Yarra",latitude:-37.8154,longitude:145.0016,room_type:"Entire home/apt",price:84,minimum_nights:3,number_of_reviews:80,availability_365:0},
+  {id:86369,name:"Sunny 1950s Apartment, St Kilda East",host_name:"Fiona",neighbourhood:"Glen Eira",latitude:-37.8714,longitude:145.0078,room_type:"Entire home/apt",price:125,minimum_nights:21,number_of_reviews:10,availability_365:175},
+  {id:108032,name:"Studio apartment on Collins Street",host_name:"Malcolm",neighbourhood:"Melbourne",latitude:-37.816,longitude:144.9661,room_type:"Entire home/apt",price:150,minimum_nights:2,number_of_reviews:261,availability_365:364},
+  {id:120487,name:"Garden Bungalow with the Possums",host_name:"Barbara",neighbourhood:"Kingston",latitude:-37.9903,longitude:145.0774,room_type:"Entire home/apt",price:97,minimum_nights:3,number_of_reviews:87,availability_365:251},
+  {id:133617,name:"Life style on the Beach",host_name:"Hannah",neighbourhood:"Port Phillip",latitude:-37.843,longitude:144.9415,room_type:"Private room",price:90,minimum_nights:3,number_of_reviews:14,availability_365:179},
+  {id:136510,name:"Private Room",host_name:"Shirley",neighbourhood:"Moonee Valley",latitude:-37.7813,longitude:144.9386,room_type:"Private room",price:48,minimum_nights:1,number_of_reviews:10,availability_365:0},
+  {id:144236,name:"Lux Apartment, Australian Open",host_name:"Pete And Liz",neighbourhood:"Melbourne",latitude:-37.843,longitude:144.9791,room_type:"Private room",price:268,minimum_nights:2,number_of_reviews:0,availability_365:365},
+  {id:150729,name:"Fabulous Fitzroy, gorgeous Gertrude St. No Ikea!",host_name:"Ramona",neighbourhood:"Yarra",latitude:-37.8052,longitude:144.9805,room_type:"Private room",price:90,minimum_nights:2,number_of_reviews:581,availability_365:65},
+  {id:157427,name:"Stone's Throw Studio, Belgrave",host_name:"Margaret",neighbourhood:"Yarra Ranges",latitude:-37.9061,longitude:145.3507,room_type:"Entire home/apt",price:163,minimum_nights:1,number_of_reviews:42,availability_365:343},
+  {id:161033,name:"Healesville Yarra Valley Cottage",host_name:"Karen",neighbourhood:"Yarra Ranges",latitude:-37.6328,longitude:145.4977,room_type:"Entire home/apt",price:95,minimum_nights:2,number_of_reviews:245,availability_365:106},
+  {id:161404,name:"Handy Location, 5Beds, 3bath, 10km to CBD",host_name:"Alice",neighbourhood:"Banyule",latitude:-37.7577,longitude:145.0383,room_type:"Entire home/apt",price:132,minimum_nights:4,number_of_reviews:40,availability_365:70},
+  {id:163077,name:"Elwood CHIC 1BR+WALK TO VILLAGE+WIFI",host_name:"The A2C Team",neighbourhood:"Port Phillip",latitude:-37.8786,longitude:144.9913,room_type:"Entire home/apt",price:89,minimum_nights:3,number_of_reviews:59,availability_365:0},
+  {id:173426,name:"Beautiful Northcote home with heart",host_name:"Tania",neighbourhood:"Darebin",latitude:-37.7643,longitude:144.9862,room_type:"Private room",price:40,minimum_nights:1,number_of_reviews:18,availability_365:0},
+  {id:189293,name:"A POP-UP BEDROOM NEAR CITY AND AIRPORT",host_name:"Diana",neighbourhood:"Darebin",latitude:-37.6988,longitude:145.0019,room_type:"Private room",price:35,minimum_nights:2,number_of_reviews:1,availability_365:0},
+  {id:209073,name:"Luxury Melbourne City Apartment",host_name:"Oscar",neighbourhood:"Melbourne",latitude:-37.8171,longitude:144.9768,room_type:"Entire home/apt",price:180,minimum_nights:7,number_of_reviews:21,availability_365:365},
+  {id:210568,name:"Carnarvon, Armadale/St KldaE/Caulfl",host_name:"Ian",neighbourhood:"Glen Eira",latitude:-37.8672,longitude:145.0288,room_type:"Private room",price:60,minimum_nights:3,number_of_reviews:22,availability_365:78},
+  {id:213348,name:"Large room in quiet Victorian home",host_name:"Adrian",neighbourhood:"Port Phillip",latitude:-37.8587,longitude:144.9879,room_type:"Private room",price:90,minimum_nights:3,number_of_reviews:3,availability_365:365},
+  {id:214565,name:"Warm and inviting cottage in the North East",host_name:"Helen",neighbourhood:"Banyule",latitude:-37.7137,longitude:145.1238,room_type:"Private room",price:40,minimum_nights:1,number_of_reviews:0,availability_365:0},
+  {id:229430,name:"ROOM IN MODERN TOWNHOUSE Melbourne",host_name:"Daniela",neighbourhood:"Boroondara",latitude:-37.8317,longitude:145.0492,room_type:"Private room",price:49,minimum_nights:2,number_of_reviews:23,availability_365:0},
+  {id:230790,name:"Clarelee - Belgrave Accommodation",host_name:"Clarelee",neighbourhood:"Yarra Ranges",latitude:-37.9051,longitude:145.3526,room_type:"Entire home/apt",price:564,minimum_nights:2,number_of_reviews:77,availability_365:316},
+  {id:232088,name:"VERY QUIET 2 Bedrooms 2 Bathrooms BIG Kitchen",host_name:"Mal",neighbourhood:"Moreland",latitude:-37.711,longitude:144.9518,room_type:"Entire home/apt",price:149,minimum_nights:2,number_of_reviews:21,availability_365:310},
+  {id:232812,name:"Parkland apartment on edge of CBD",host_name:"Rosemary",neighbourhood:"Melbourne",latitude:-37.784,longitude:144.9574,room_type:"Entire home/apt",price:190,minimum_nights:2,number_of_reviews:8,availability_365:0},
+  {id:240410,name:"Beautifully Appointed Apt - Central",host_name:"Neil",neighbourhood:"Melbourne",latitude:-37.8045,longitude:144.9511,room_type:"Entire home/apt",price:135,minimum_nights:2,number_of_reviews:78,availability_365:306},
+  {id:244872,name:"Cool spot near chapel st!",host_name:"Jenny",neighbourhood:"Stonnington",latitude:-37.8507,longitude:145.0086,room_type:"Private room",price:73,minimum_nights:1,number_of_reviews:0,availability_365:365},
+  {id:244952,name:"Treehouse apartment in Fitzroy",host_name:"Rebecca",neighbourhood:"Yarra",latitude:-37.8043,longitude:144.9792,room_type:"Entire home/apt",price:76,minimum_nights:5,number_of_reviews:287,availability_365:190},
+  {id:247140,name:"Self Contained Apartment (CBD Edge)",host_name:"Fiona",neighbourhood:"Melbourne",latitude:-37.8157,longitude:144.9768,room_type:"Entire home/apt",price:225,minimum_nights:3,number_of_reviews:83,availability_365:359},
+  {id:248235,name:"Gorgeous home with pool. Central location!!",host_name:"Ayelet",neighbourhood:"Glen Eira",latitude:-37.8654,longitude:145.0173,room_type:"Entire home/apt",price:620,minimum_nights:4,number_of_reviews:14,availability_365:140},
+  {id:251354,name:"Inner city Warehouse Garden of Eden",host_name:"Elana",neighbourhood:"Stonnington",latitude:-37.8593,longitude:145.0235,room_type:"Entire home/apt",price:223,minimum_nights:1,number_of_reviews:8,availability_365:89},
+  {id:251965,name:"Private room in Elwood",host_name:"Nathan",neighbourhood:"Port Phillip",latitude:-37.8783,longitude:144.9882,room_type:"Entire home/apt",price:244,minimum_nights:1,number_of_reviews:0,availability_365:0},
+  {id:256186,name:"Collingwood 2 bedrm Warehouse Apt",host_name:"Hoang And Michael",neighbourhood:"Yarra",latitude:-37.8024,longitude:144.9835,room_type:"Entire home/apt",price:105,minimum_nights:6,number_of_reviews:166,availability_365:328},
+  {id:263871,name:"In The Heart Of The City- Melbourne",host_name:"Eliisa",neighbourhood:"Melbourne",latitude:-37.8169,longitude:144.9606,room_type:"Entire home/apt",price:131,minimum_nights:7,number_of_reviews:42,availability_365:365},
+  {id:268525,name:"Home 20mins (CBD) near Box Hill (private home)",host_name:"Anita",neighbourhood:"Whitehorse",latitude:-37.8129,longitude:145.1408,room_type:"Private room",price:62,minimum_nights:14,number_of_reviews:0,availability_365:270},
+  {id:268620,name:"nice room",host_name:"Richard",neighbourhood:"Melton",latitude:-37.7399,longitude:144.7388,room_type:"Private room",price:72,minimum_nights:1,number_of_reviews:0,availability_365:365},
+  {id:268849,name:"Unique, Intimately Styled South Yarra Sanctuary",host_name:"Little Journey",neighbourhood:"Stonnington",latitude:-37.8366,longitude:144.9934,room_type:"Entire home/apt",price:120,minimum_nights:1,number_of_reviews:594,availability_365:0},
+  {id:277605,name:"Angelus Retreat @ Mount Dandenong",host_name:"Margaret Jiin",neighbourhood:"Yarra Ranges",latitude:-37.9056,longitude:145.3953,room_type:"Entire home/apt",price:270,minimum_nights:2,number_of_reviews:14,availability_365:242},
+  {id:280698,name:"Elwood SPACIOUS OPEN PLAN EXEC 2BR+PARKING+WIFI+AC",host_name:"The A2C Team",neighbourhood:"Port Phillip",latitude:-37.8732,longitude:144.9894,room_type:"Entire home/apt",price:169,minimum_nights:3,number_of_reviews:62,availability_365:0},
+  {id:283257,name:"sunlit studio down a quiet laneway",host_name:"Lulu",neighbourhood:"Yarra",latitude:-37.8058,longitude:144.9808,room_type:"Entire home/apt",price:140,minimum_nights:3,number_of_reviews:129,availability_365:265},
+  {id:284210,name:"Fitzroyalty - stylish and central",host_name:"Kate",neighbourhood:"Yarra",latitude:-37.7995,longitude:144.9795,room_type:"Entire home/apt",price:245,minimum_nights:2,number_of_reviews:34,availability_365:0},
+  {id:289467,name:"The Suite @ Angelus Retreat",host_name:"Margaret Jiin",neighbourhood:"Yarra Ranges",latitude:-37.9055,longitude:145.3945,room_type:"Entire home/apt",price:270,minimum_nights:2,number_of_reviews:5,availability_365:362},
+  {id:297350,name:"Best, west of Melbourne-Wifi & Spa1",host_name:"Ryan",neighbourhood:"Brimbank",latitude:-37.7837,longitude:144.7573,room_type:"Private room",price:47,minimum_nights:1,number_of_reviews:280,availability_365:365},
+  {id:300679,name:"Comfy room in Oakleigh South Melbourne",host_name:"Julie",neighbourhood:"Kingston",latitude:-37.94,longitude:145.0968,room_type:"Private room",price:35,minimum_nights:2,number_of_reviews:66,availability_365:295},
+  {id:309093,name:"Savour 180-Degree Urban Views at a Triple Level Loft",host_name:"Adam + Caro",neighbourhood:"Yarra",latitude:-37.8197,longitude:144.9996,room_type:"Entire home/apt",price:245,minimum_nights:2,number_of_reviews:24,availability_365:0},
+  {id:313648,name:"(1) Stylish, East Melb 1bed apt",host_name:"Haydn",neighbourhood:"Melbourne",latitude:-37.8136,longitude:144.9866,room_type:"Entire home/apt",price:95,minimum_nights:6,number_of_reviews:51,availability_365:59},
+  {id:315513,name:"Best, west of Melbourne-Wifi & spa2",host_name:"Ryan",neighbourhood:"Brimbank",latitude:-37.7837,longitude:144.7573,room_type:"Private room",price:50,minimum_nights:1,number_of_reviews:100,availability_365:0},
+  {id:317239,name:"Inner City Home-6 stops by train to Melbourne CBD",host_name:"Jacqueline",neighbourhood:"Hobsons Bay",latitude:-37.8296,longitude:144.8716,room_type:"Private room",price:95,minimum_nights:3,number_of_reviews:0,availability_365:365},
+  {id:323280,name:"Classic Victorian Armadale Home",host_name:"Fay",neighbourhood:"Stonnington",latitude:-37.86,longitude:145.0212,room_type:"Private room",price:68,minimum_nights:1,number_of_reviews:46,availability_365:365},
+  {id:334891,name:"Attractive room in leafy Deepdene",host_name:"Veruschka",neighbourhood:"Boroondara",latitude:-37.8129,longitude:145.0638,room_type:"Private room",price:85,minimum_nights:1,number_of_reviews:4,availability_365:365},
+  {id:363060,name:"SUNLIT Kitchen/Vegie Garden/CLEAN",host_name:"Rovielle",neighbourhood:"Wyndham",latitude:-37.8454,longitude:144.7164,room_type:"Private room",price:70,minimum_nights:3,number_of_reviews:0,availability_365:365},
+  {id:363278,name:"Fitzroy: Tiny stone cottage",host_name:"Alan",neighbourhood:"Yarra",latitude:-37.8028,longitude:144.983,room_type:"Private room",price:70,minimum_nights:1,number_of_reviews:272,availability_365:322},
+  {id:381690,name:"Renovated Art Deco fully furnished",host_name:"Shelly",neighbourhood:"Port Phillip",latitude:-37.8623,longitude:144.9978,room_type:"Entire home/apt",price:95,minimum_nights:7,number_of_reviews:40,availability_365:320},
+  {id:386252,name:"Room for rent, townhouse in Kew",host_name:"F",neighbourhood:"Boroondara",latitude:-37.8087,longitude:145.039,room_type:"Shared room",price:100,minimum_nights:30,number_of_reviews:0,availability_365:365},
+  {id:394600,name:"Quiet one-bedroom apartment",host_name:"Julie",neighbourhood:"Moreland",latitude:-37.7692,longitude:144.9528,room_type:"Entire home/apt",price:115,minimum_nights:2,number_of_reviews:257,availability_365:288},
+  {id:403876,name:"Luxurious Self Contained Pool House",host_name:"Abby",neighbourhood:"Stonnington",latitude:-37.8413,longitude:145.0363,room_type:"Entire home/apt",price:105,minimum_nights:6,number_of_reviews:256,availability_365:52},
+  {id:405515,name:"PRIVATE UNIT Dble bed Kitch, own bathroom",host_name:"Mal",neighbourhood:"Moreland",latitude:-37.7114,longitude:144.9527,room_type:"Entire home/apt",price:89,minimum_nights:2,number_of_reviews:5,availability_365:310},
+  {id:406997,name:"Spacious Rm for you or couple",host_name:"Bill",neighbourhood:"Stonnington",latitude:-37.8843,longitude:145.0613,room_type:"Private room",price:35,minimum_nights:14,number_of_reviews:62,availability_365:86},
+  {id:415272,name:"Great location! Easy access to CBD, Aus. Open.",host_name:"Mem",neighbourhood:"Boroondara",latitude:-37.845,longitude:145.054,room_type:"Private room",price:50,minimum_nights:2,number_of_reviews:1,availability_365:0},
+  {id:419490,name:"Very Large 2 Bdrm Apt in Melbourne!",host_name:"Victoria",neighbourhood:"Moonee Valley",latitude:-37.7853,longitude:144.9271,room_type:"Entire home/apt",price:150,minimum_nights:7,number_of_reviews:3,availability_365:0},
+  {id:433779,name:"Room with private courtyard",host_name:"Bill",neighbourhood:"Stonnington",latitude:-37.8843,longitude:145.0614,room_type:"Private room",price:36,minimum_nights:21,number_of_reviews:54,availability_365:154},
+  {id:438849,name:"Grand Old Victorian Hawthorn Home",host_name:"Ian",neighbourhood:"Boroondara",latitude:-37.8233,longitude:145.0581,room_type:"Entire home/apt",price:200,minimum_nights:10,number_of_reviews:4,availability_365:0},
+  {id:438899,name:"Uber-Cool Loft-South Melbourne-Wkly&Mthly Pricing",host_name:"Belinda",neighbourhood:"Port Phillip",latitude:-37.835,longitude:144.9625,room_type:"Entire home/apt",price:200,minimum_nights:2,number_of_reviews:203,availability_365:315},
+  {id:448025,name:"Straw and Earth room in Eco home",host_name:"Paul",neighbourhood:"Moreland",latitude:-37.7372,longitude:144.934,room_type:"Private room",price:45,minimum_nights:1,number_of_reviews:25,availability_365:178},
+  {id:449585,name:"Need Luxury Homebase in Melbourne 1",host_name:"Nola",neighbourhood:"Boroondara",latitude:-37.8043,longitude:145.0515,room_type:"Private room",price:100,minimum_nights:1,number_of_reviews:29,availability_365:252},
+  {id:453940,name:"Corner room - Private & Lovely Balwyn Nth Home",host_name:"Jessica",neighbourhood:"Boroondara",latitude:-37.7933,longitude:145.0789,room_type:"Private room",price:40,minimum_nights:1,number_of_reviews:5,availability_365:13},
+  {id:456950,name:"St Kilda Bay Views",host_name:"Harry",neighbourhood:"Port Phillip",latitude:-37.8549,longitude:144.9822,room_type:"Entire home/apt",price:291,minimum_nights:5,number_of_reviews:3,availability_365:365},
+  {id:464528,name:"BOUTIQUE STAYS – Zinc Views - 501",host_name:"Boutique Stays",neighbourhood:"Port Phillip",latitude:-37.8432,longitude:144.9402,room_type:"Entire home/apt",price:403,minimum_nights:3,number_of_reviews:5,availability_365:335},
+  {id:464612,name:"Point Cook Homestay with Private Bathroom",host_name:"KC And Serena",neighbourhood:"Wyndham",latitude:-37.9004,longitude:144.725,room_type:"Private room",price:49,minimum_nights:3,number_of_reviews:64,availability_365:364},
+  {id:466494,name:"BOUTIQUE STAYS - Victorian Vogue",host_name:"Boutique Stays",neighbourhood:"Yarra",latitude:-37.8179,longitude:145.0086,room_type:"Entire home/apt",price:654,minimum_nights:3,number_of_reviews:8,availability_365:363},
+  {id:479281,name:"BOUTIQUE STAYS - Brighton Rose",host_name:"Boutique Stays",neighbourhood:"Bayside",latitude:-37.9093,longitude:144.9898,room_type:"Entire home/apt",price:368,minimum_nights:5,number_of_reviews:5,availability_365:358},
+  {id:479333,name:"BOUTIQUE STAYS - Clifton Park",host_name:"Boutique Stays",neighbourhood:"Yarra",latitude:-37.7871,longitude:145.0028,room_type:"Entire home/apt",price:443,minimum_nights:3,number_of_reviews:15,availability_365:363},
+  {id:479472,name:"BOUTIQUE STAYS - Sandyside 2",host_name:"Boutique Stays",neighbourhood:"Bayside",latitude:-37.953,longitude:145.0115,room_type:"Entire home/apt",price:403,minimum_nights:3,number_of_reviews:8,availability_365:363},
+  {id:479736,name:"Belsize Garden Apartment St Kilda",host_name:"Barbara",neighbourhood:"Port Phillip",latitude:-37.8703,longitude:144.9963,room_type:"Entire home/apt",price:161,minimum_nights:2,number_of_reviews:72,availability_365:326},
+  {id:483719,name:"Quiet Studio Next to Train Station",host_name:"Dennis",neighbourhood:"Banyule",latitude:-37.7421,longitude:145.0654,room_type:"Private room",price:60,minimum_nights:2,number_of_reviews:27,availability_365:365},
+  {id:484148,name:"Point Cook Homestay with Private Bathroom-2",host_name:"KC And Serena",neighbourhood:"Wyndham",latitude:-37.8996,longitude:144.7264,room_type:"Private room",price:48,minimum_nights:4,number_of_reviews:24,availability_365:364},
+  {id:488819,name:"Brunswick St at your doorstep",host_name:"Dave",neighbourhood:"Yarra",latitude:-37.8034,longitude:144.9762,room_type:"Entire home/apt",price:155,minimum_nights:4,number_of_reviews:3,availability_365:0},
+  {id:492022,name:"BOUTIQUE STAYS – Sandy Haven A",host_name:"Boutique Stays",neighbourhood:"Bayside",latitude:-37.9477,longitude:145.0032,room_type:"Entire home/apt",price:443,minimum_nights:3,number_of_reviews:9,availability_365:337},
+  {id:492071,name:"BOUTIQUE STAYS - Sandy Haven C",host_name:"Boutique Stays",neighbourhood:"Bayside",latitude:-37.9477,longitude:145.0032,room_type:"Entire home/apt",price:495,minimum_nights:3,number_of_reviews:11,availability_365:363},
+  {id:506491,name:"Relax! Private, Stylish Loft & Spa!",host_name:"Maureen",neighbourhood:"Whitehorse",latitude:-37.8433,longitude:145.1355,room_type:"Private room",price:70,minimum_nights:2,number_of_reviews:74,availability_365:302},
+  {id:508586,name:"Beautiful Ensuite - convenient & private room",host_name:"Jessica",neighbourhood:"Boroondara",latitude:-37.7937,longitude:145.0847,room_type:"Private room",price:45,minimum_nights:1,number_of_reviews:10,availability_365:362},
+  {id:508590,name:"Sunlit, Cosy Room in Convenient Location",host_name:"Jessica",neighbourhood:"Boroondara",latitude:-37.794,longitude:145.0832,room_type:"Private room",price:40,minimum_nights:1,number_of_reviews:5,availability_365:362},
+  {id:508594,name:"Large room - Convenient, Private & Cosy location",host_name:"Jessica",neighbourhood:"Boroondara",latitude:-37.7938,longitude:145.0833,room_type:"Private room",price:40,minimum_nights:1,number_of_reviews:10,availability_365:362},
+  {id:509326,name:"home away from home",host_name:"Rob",neighbourhood:"Whittlesea",latitude:-37.6827,longitude:145.0284,room_type:"Private room",price:114,minimum_nights:1,number_of_reviews:0,availability_365:365},
+  {id:513766,name:"Guest room in a big house",host_name:"Sanjeev",neighbourhood:"Casey",latitude:-38.0686,longitude:145.3343,room_type:"Private room",price:70,minimum_nights:1,number_of_reviews:0,availability_365:365},
+  {id:524570,name:"Private room with en-suite shower and toilet",host_name:"Theresa",neighbourhood:"Yarra Ranges",latitude:-37.6552,longitude:145.3755,room_type:"Private room",price:80,minimum_nights:1,number_of_reviews:164,availability_365:203},
+  {id:529300,name:"St Kilda 1 Bedroom Apartment",host_name:"Alan",neighbourhood:"Port Phillip",latitude:-37.8632,longitude:144.9838,room_type:"Entire home/apt",price:75,minimum_nights:1,number_of_reviews:10,availability_365:358},
+  {id:529321,name:"St Kilda Studio in Redan St",host_name:"Alan",neighbourhood:"Port Phillip",latitude:-37.8607,longitude:144.9887,room_type:"Entire home/apt",price:62,minimum_nights:1,number_of_reviews:6,availability_365:338}
+];
+
+// ──────────────────────────────────────────────
+// COMPUTED STATS
+// ──────────────────────────────────────────────
+const groupBy = (arr, key) => arr.reduce((acc, item) => {
+  const k = item[key];
+  if (!acc[k]) acc[k] = [];
+  acc[k].push(item);
+  return acc;
+}, {});
+
+const avgPrice = {};
+const avgAvail = {};
+const byNeigh = groupBy(RAW, 'neighbourhood');
+Object.entries(byNeigh).forEach(([n, items]) => {
+  avgPrice[n] = Math.round(items.reduce((s, i) => s + i.price, 0) / items.length * 10) / 10;
+  avgAvail[n] = Math.round(items.reduce((s, i) => s + i.availability_365, 0) / items.length);
+});
+
+const sortedByPrice = Object.entries(avgPrice).sort((a, b) => b[1] - a[1]);
+const maxPrice = sortedByPrice[0][1];
+
+// ──────────────────────────────────────────────
+// CHART DEFAULTS
+// ──────────────────────────────────────────────
+Chart.defaults.color = '#7a8ba8';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+const gridColor = 'rgba(35,44,61,0.7)';
+const tooltipStyle = {
+  backgroundColor: '#1a2130',
+  borderColor: '#232c3d',
+  borderWidth: 1,
+  titleColor: '#e8edf5',
+  bodyColor: '#7a8ba8',
+  padding: 12,
+  cornerRadius: 8
+};
+
+// ──────────────────────────────────────────────
+// CHART 1 — PRICE BAR
+// ──────────────────────────────────────────────
+const top14 = sortedByPrice.slice(0, 14);
+const priceCtx = document.getElementById('priceBarChart').getContext('2d');
+
+const barGradient = priceCtx.createLinearGradient(0, 0, 600, 0);
+barGradient.addColorStop(0, '#ff5a5f');
+barGradient.addColorStop(1, '#fc642d');
+
+new Chart(priceCtx, {
+  type: 'bar',
+  data: {
+    labels: top14.map(([n]) => n),
+    datasets: [{
+      data: top14.map(([, v]) => v),
+      backgroundColor: top14.map((_, i) => i < 3 ? barGradient : 'rgba(0,166,153,0.65)'),
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: ctx => ` AUD $${ctx.raw}` } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { callback: v => '$' + v } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ──────────────────────────────────────────────
+// CHART 2 — ROOM DONUT
+// ──────────────────────────────────────────────
+const roomCounts = { 'Entire home/apt': 0, 'Private room': 0, 'Shared room': 0 };
+RAW.forEach(r => roomCounts[r.room_type]++);
+
+new Chart(document.getElementById('roomDonut').getContext('2d'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(roomCounts),
+    datasets: [{
+      data: Object.values(roomCounts),
+      backgroundColor: ['#00a699', '#fc642d', '#f0c040'],
+      borderColor: '#13181f',
+      borderWidth: 3,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    cutout: '68%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...tooltipStyle, callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/100*100)}%)` } }
+    }
+  }
+});
+
+// ──────────────────────────────────────────────
+// CHART 3 — PRICE HISTOGRAM
+// ──────────────────────────────────────────────
+const buckets = [
+  { label: '$0–50', min: 0, max: 50 },
+  { label: '$50–100', min: 50, max: 100 },
+  { label: '$100–150', min: 100, max: 150 },
+  { label: '$150–200', min: 150, max: 200 },
+  { label: '$200–300', min: 200, max: 300 },
+  { label: '$300–500', min: 300, max: 500 },
+  { label: '$500+', min: 500, max: Infinity }
+];
+
+const histData = buckets.map(b => RAW.filter(r => r.price >= b.min && r.price < b.max).length);
+const histGrad = document.getElementById('priceHistogram').getContext('2d').createLinearGradient(0, 0, 0, 220);
+histGrad.addColorStop(0, 'rgba(0,166,153,0.8)');
+histGrad.addColorStop(1, 'rgba(0,166,153,0.15)');
+
+new Chart(document.getElementById('priceHistogram').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: buckets.map(b => b.label),
+    datasets: [{
+      data: histData,
+      backgroundColor: histGrad,
+      borderColor: 'rgba(0,166,153,0.9)',
+      borderWidth: 1,
+      borderRadius: 5
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: ctx => ` ${ctx.raw} listings` } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { stepSize: 5 } }
+    }
+  }
+});
+
+// ──────────────────────────────────────────────
+// CHART 4 — AVAILABILITY
+// ──────────────────────────────────────────────
+const availSorted = Object.entries(avgAvail).sort((a, b) => b[1] - a[1]);
+
+const availGrad = document.getElementById('availChart').getContext('2d').createLinearGradient(0, 0, 0, 230);
+availGrad.addColorStop(0, 'rgba(240,192,64,0.75)');
+availGrad.addColorStop(1, 'rgba(240,192,64,0.15)');
+
+new Chart(document.getElementById('availChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: availSorted.map(([n]) => n.length > 12 ? n.slice(0,11)+'…' : n),
+    datasets: [{
+      data: availSorted.map(([, v]) => v),
+      backgroundColor: availGrad,
+      borderColor: 'rgba(240,192,64,0.8)',
+      borderWidth: 1,
+      borderRadius: 5
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: ctx => ` ${ctx.raw} days/yr` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+      y: { grid: { color: gridColor }, max: 365, ticks: { callback: v => v + 'd' } }
+    }
+  }
+});
+
+// ──────────────────────────────────────────────
+// NEIGHBOURHOOD TABLE
+// ──────────────────────────────────────────────
+const tbody = document.getElementById('neighTableBody');
+sortedByPrice.forEach(([name, price], i) => {
+  const avail = avgAvail[name] || 0;
+  const barW = Math.round((price / maxPrice) * 160);
+  let availCls = avail >= 300 ? 'avail-high' : avail >= 150 ? 'avail-med' : 'avail-low';
+  let availLabel = avail >= 300 ? '🟢 High' : avail >= 150 ? '🟡 Medium' : '🔴 Low';
+  const priceColor = price >= 300 ? '#ff5a5f' : price >= 150 ? '#fc642d' : '#00a699';
+
+  tbody.innerHTML += `
+    <tr>
+      <td class="rank">${i + 1}</td>
+      <td class="name">${name}</td>
+      <td class="price-col" style="color:${priceColor}">$${price}</td>
+      <td>
+        <div class="price-bar-wrap">
+          <div class="price-bar" style="width:${barW}px"></div>
+          <span style="font-size:13px;color:var(--muted);font-family:DM Mono,monospace">${price}</span>
+        </div>
+      </td>
+      <td class="font-mono" style="font-size:14px">${avail} days</td>
+      <td><span class="avail-pill ${availCls}">${availLabel}</span></td>
+    </tr>`;
+});
+
+// ──────────────────────────────────────────────
+// LISTINGS TABLE
+// ──────────────────────────────────────────────
+const neighbourhoodFilter = document.getElementById('neighbourhoodFilter');
+const roomFilter = document.getElementById('roomFilter');
+const priceFilter = document.getElementById('priceFilter');
+const searchInput = document.getElementById('searchInput');
+
+// Populate neighbourhood filter
+const neighbourhoods = [...new Set(RAW.map(r => r.neighbourhood))].sort();
+neighbourhoods.forEach(n => {
+  const opt = document.createElement('option');
+  opt.value = n; opt.textContent = n;
+  neighbourhoodFilter.appendChild(opt);
+});
+
+let sortKey = 'price';
+let sortDir = -1;
+let currentPage = 1;
+const PAGE_SIZE = 15;
+
+function getFiltered() {
+  const neigh = neighbourhoodFilter.value;
+  const room = roomFilter.value;
+  const price = priceFilter.value;
+  const search = searchInput.value.toLowerCase();
+  return RAW
+    .filter(r => {
+      if (neigh && r.neighbourhood !== neigh) return false;
+      if (room && r.room_type !== room) return false;
+      if (price) {
+        const [mn, mx] = price === '300+' ? [300, Infinity] : price.split('-').map(Number);
+        if (r.price < mn || r.price >= (mx || Infinity)) return false;
+      }
+      if (search && !r.name.toLowerCase().includes(search) && !r.neighbourhood.toLowerCase().includes(search)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (typeof a[sortKey] === 'string') return sortDir * a[sortKey].localeCompare(b[sortKey]);
+      return sortDir * (a[sortKey] - b[sortKey]);
+    });
+}
+
+function roomClass(type) {
+  if (type === 'Entire home/apt') return 'room-entire';
+  if (type === 'Private room') return 'room-private';
+  return 'room-shared';
+}
+
+function renderTable() {
+  const data = getFiltered();
+  const total = data.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  currentPage = Math.min(currentPage, pages);
+  const slice = data.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const tbody = document.getElementById('listingsBody');
+  tbody.innerHTML = slice.map(r => `
+    <tr>
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${r.name}</td>
+      <td style="color:var(--muted)">${r.neighbourhood}</td>
+      <td><span class="room-tag ${roomClass(r.room_type)}">${r.room_type}</span></td>
+      <td><span class="price-num">$${r.price}</span></td>
+      <td class="font-mono" style="font-size:14px;color:var(--muted)">${r.minimum_nights}</td>
+      <td class="font-mono" style="font-size:14px;color:var(--muted)">${r.number_of_reviews}</td>
+      <td>
+        <div class="price-bar-wrap">
+          <div class="price-bar" style="width:${Math.round(r.availability_365/365*60)}px;background:linear-gradient(90deg,#00a699,#f0c040)"></div>
+          <span class="font-mono" style="font-size:13px;color:var(--muted)">${r.availability_365}d</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageInfo').textContent = `${total} listings · Page ${currentPage}/${pages}`;
+  renderPagination(pages);
+}
+
+function renderPagination(pages) {
+  const el = document.getElementById('pagination');
+  el.innerHTML = '<span class="page-info" id="pageInfo"></span>';
+  document.getElementById('pageInfo').textContent = `${getFiltered().length} listings · Page ${currentPage}/${pages}`;
+
+  if (pages <= 1) return;
+
+  const prev = document.createElement('button');
+  prev.className = 'page-btn';
+  prev.textContent = '‹';
+  prev.disabled = currentPage === 1;
+  prev.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+  el.appendChild(prev);
+
+  for (let i = 1; i <= pages; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+    btn.textContent = i;
+    btn.onclick = () => { currentPage = i; renderTable(); };
+    el.appendChild(btn);
+  }
+
+  const next = document.createElement('button');
+  next.className = 'page-btn';
+  next.textContent = '›';
+  next.disabled = currentPage === pages;
+  next.onclick = () => { if (currentPage < pages) { currentPage++; renderTable(); } };
+  el.appendChild(next);
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  renderTable();
+}
+
+[neighbourhoodFilter, roomFilter, priceFilter, searchInput].forEach(el => {
+  el.addEventListener('change', () => { currentPage = 1; renderTable(); });
+  if (el.tagName === 'INPUT') el.addEventListener('input', () => { currentPage = 1; renderTable(); });
+});
+
+renderTable();
+
+// ──────────────────────────────────────────────
+// SCROLL FADE IN
+// ──────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
