@@ -7,6 +7,8 @@
 This project performs exploratory data analysis (EDA) on a Melbourne, Australia Airbnb dataset to uncover pricing patterns, availability trends, and neighbourhood-level insights. The analysis is implemented in Python using Pandas, Matplotlib, Seaborn, and Plotly.
 
 ---
+🔗 Live Dashboard:
+https://aditipaul17.github.io/Aditi_Airbnb_Data_Analysis/
 
 ## 📂 Repository Structure
 
